@@ -139,6 +139,8 @@
         <div class="tabs">
           <button id="tab-modular" class="tab active" type="button">モジュール</button>
           <button id="tab-box" class="tab" type="button">Box</button>
+          <button id="tab-chair" class="tab" type="button">椅子</button>
+          <button id="tab-desk" class="tab" type="button">机</button>
         </div>
         <p id="mode-description">
           合板の廃材から再利用しやすい部品を生成します。単位は mm。外周と内側スロットを
@@ -186,6 +188,78 @@
             <input id="boxHasLid" type="checkbox" checked />
             上面に蓋パネルを付ける
           </label>
+        </div>
+        <div class="group hidden" data-mode="chair">
+          <label for="chairCount">椅子セット数</label>
+          <input id="chairCount" type="number" value="1" min="1" step="1" />
+        </div>
+        <div class="group hidden" data-mode="chair">
+          <label for="chairSeatW">座面横幅 (s)</label>
+          <input id="chairSeatW" type="number" value="80" min="50" max="500" step="1" />
+        </div>
+        <div class="group hidden" data-mode="chair">
+          <label for="chairSideOffset">側面横幅調整 (s2)</label>
+          <input id="chairSideOffset" type="number" value="0" min="-100" max="500" step="1" />
+        </div>
+        <div class="group hidden" data-mode="chair">
+          <label for="chairLegRise">足長さ調整 (s3)</label>
+          <input id="chairLegRise" type="number" value="0" min="-50" max="500" step="1" />
+        </div>
+        <div class="group hidden" data-mode="chair">
+          <label for="chairLegSlim">足細さ調整 (s5)</label>
+          <input id="chairLegSlim" type="number" value="0" min="-200" max="200" step="1" />
+        </div>
+        <div class="group hidden" data-mode="chair">
+          <label for="chairLegTop">足調整 (s6)</label>
+          <input id="chairLegTop" type="number" value="40" min="-200" max="300" step="1" />
+        </div>
+        <div class="group hidden" data-mode="chair">
+          <label for="chairBackY">背もたれ長さ (yp5)</label>
+          <input id="chairBackY" type="number" value="100" min="-500" max="160" step="1" />
+        </div>
+        <div class="group hidden" data-mode="chair">
+          <label for="chairBackAngle">背もたれ角度 (deg)</label>
+          <input id="chairBackAngle" type="number" value="-74" min="-89" max="-20" step="1" />
+        </div>
+        <div class="group hidden" data-mode="desk">
+          <label for="deskCount">机セット数</label>
+          <input id="deskCount" type="number" value="1" min="1" step="1" />
+        </div>
+        <div class="group hidden" data-mode="desk">
+          <label for="deskW">横幅 (s)</label>
+          <input id="deskW" type="number" value="1820" min="182" max="3640" step="1" />
+        </div>
+        <div class="group hidden" data-mode="desk">
+          <label for="deskD">縦幅 (s2)</label>
+          <input id="deskD" type="number" value="910" min="91" max="1820" step="1" />
+        </div>
+        <div class="group hidden" data-mode="desk">
+          <label for="deskLegH">脚長 (s3)</label>
+          <input id="deskLegH" type="number" value="910" min="91" max="1820" step="1" />
+        </div>
+        <div class="group hidden" data-mode="desk">
+          <label for="deskApron">幕板 (s4)</label>
+          <input id="deskApron" type="number" value="182" min="18" max="364" step="1" />
+        </div>
+        <div class="group hidden" data-mode="desk">
+          <label for="deskLegW">足幅 (s5)</label>
+          <input id="deskLegW" type="number" value="200" min="1" max="1000" step="1" />
+        </div>
+        <div class="group hidden" data-mode="desk">
+          <label for="deskLegRight1">脚1右 (s6)</label>
+          <input id="deskLegRight1" type="number" value="250" min="1" max="1000" step="1" />
+        </div>
+        <div class="group hidden" data-mode="desk">
+          <label for="deskLegRight2">脚2右 (s7)</label>
+          <input id="deskLegRight2" type="number" value="250" min="1" max="1000" step="1" />
+        </div>
+        <div class="group hidden" data-mode="desk">
+          <label for="deskLegLeft1">脚1左 (s8)</label>
+          <input id="deskLegLeft1" type="number" value="250" min="1" max="1000" step="1" />
+        </div>
+        <div class="group hidden" data-mode="desk">
+          <label for="deskLegLeft2">脚2左 (s9)</label>
+          <input id="deskLegLeft2" type="number" value="250" min="1" max="1000" step="1" />
         </div>
         <div class="group" data-mode="all">
           <label for="thickness">板厚 (mm)</label>

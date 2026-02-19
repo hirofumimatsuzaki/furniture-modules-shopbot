@@ -11,6 +11,24 @@ const state = {
     boxH: 280,
     boxCount: 1,
     boxHasLid: true,
+    chairCount: 1,
+    chairSeatW: 80,
+    chairSideOffset: 0,
+    chairLegRise: 0,
+    chairLegSlim: 0,
+    chairLegTop: 40,
+    chairBackY: 100,
+    chairBackAngle: -74,
+    deskCount: 1,
+    deskW: 1820,
+    deskD: 910,
+    deskLegH: 910,
+    deskApron: 182,
+    deskLegW: 200,
+    deskLegRight1: 250,
+    deskLegRight2: 250,
+    deskLegLeft1: 250,
+    deskLegLeft2: 250,
     thickness: 15,
     clearance: 0.2,
     toolDia: 6,
@@ -32,6 +50,16 @@ const modeMeta = {
     description:
       "箱を組み立てるための6面パネルセットを生成します。蓋なしを選ぶと側板上辺はフラットになり、並べて棚構成にしやすくなります。",
   },
+  chair: {
+    label: "Chair Parts Generator",
+    description:
+      "椅子の部品セットを生成します。座面幅や脚長、背もたれ長さを調整して、いただいた椅子形状ロジックに近いパーツをSVG出力できます。",
+  },
+  desk: {
+    label: "Desk Parts Generator",
+    description:
+      "机の部品セットを生成します。天板・幕板・脚・足先を、いただいた机スクリプトの形状に合わせてSVG出力します。",
+  },
 };
 
 const ids = [
@@ -45,6 +73,24 @@ const ids = [
   "boxH",
   "boxCount",
   "boxHasLid",
+  "chairCount",
+  "chairSeatW",
+  "chairSideOffset",
+  "chairLegRise",
+  "chairLegSlim",
+  "chairLegTop",
+  "chairBackY",
+  "chairBackAngle",
+  "deskCount",
+  "deskW",
+  "deskD",
+  "deskLegH",
+  "deskApron",
+  "deskLegW",
+  "deskLegRight1",
+  "deskLegRight2",
+  "deskLegLeft1",
+  "deskLegLeft2",
   "thickness",
   "clearance",
   "toolDia",
@@ -85,15 +131,16 @@ function bindUI() {
   document.getElementById("export").addEventListener("click", exportSvg);
   document.getElementById("tab-modular").addEventListener("click", () => setMode("modular"));
   document.getElementById("tab-box").addEventListener("click", () => setMode("box"));
+  document.getElementById("tab-chair").addEventListener("click", () => setMode("chair"));
+  document.getElementById("tab-desk").addEventListener("click", () => setMode("desk"));
 
   ids.forEach((id) => {
     const el = document.getElementById(id);
     if (el.type === "checkbox") {
       el.addEventListener("change", regenerate);
     } else {
-      el.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") regenerate();
-      });
+      el.addEventListener("input", regenerate);
+      el.addEventListener("change", regenerate);
     }
   });
 }
@@ -102,6 +149,8 @@ function setMode(mode) {
   state.mode = mode;
   document.getElementById("tab-modular").classList.toggle("active", mode === "modular");
   document.getElementById("tab-box").classList.toggle("active", mode === "box");
+  document.getElementById("tab-chair").classList.toggle("active", mode === "chair");
+  document.getElementById("tab-desk").classList.toggle("active", mode === "desk");
 
   const title = document.querySelector("h1");
   const desc = document.getElementById("mode-description");
@@ -131,6 +180,24 @@ function regenerate() {
   next.boxD = max(120, next.boxD);
   next.boxH = max(120, next.boxH);
   next.boxCount = floor(max(1, next.boxCount));
+  next.chairCount = floor(max(1, next.chairCount));
+  next.chairSeatW = constrain(next.chairSeatW, 50, 500);
+  next.chairSideOffset = constrain(next.chairSideOffset, -100, 500);
+  next.chairLegRise = constrain(next.chairLegRise, -50, 500);
+  next.chairLegSlim = constrain(next.chairLegSlim, -200, 200);
+  next.chairLegTop = constrain(next.chairLegTop, -200, 300);
+  next.chairBackY = constrain(next.chairBackY, -500, 160);
+  next.chairBackAngle = constrain(next.chairBackAngle, -89, -20);
+  next.deskCount = floor(max(1, next.deskCount));
+  next.deskW = constrain(next.deskW, 182, 3640);
+  next.deskD = constrain(next.deskD, 91, 1820);
+  next.deskLegH = constrain(next.deskLegH, 91, 1820);
+  next.deskApron = constrain(next.deskApron, 18, 364);
+  next.deskLegW = constrain(next.deskLegW, 1, 1000);
+  next.deskLegRight1 = constrain(next.deskLegRight1, 1, 1000);
+  next.deskLegRight2 = constrain(next.deskLegRight2, 1, 1000);
+  next.deskLegLeft1 = constrain(next.deskLegLeft1, 1, 1000);
+  next.deskLegLeft2 = constrain(next.deskLegLeft2, 1, 1000);
   next.thickness = max(3, next.thickness);
   next.toolDia = max(1, next.toolDia);
   next.gap = max(4, next.gap);
@@ -138,7 +205,14 @@ function regenerate() {
   next.sheetH = max(200, next.sheetH);
 
   state.params = next;
-  const packed = state.mode === "box" ? buildBoxParts(next) : buildModularParts(next);
+  const packed =
+    state.mode === "box"
+      ? buildBoxParts(next)
+      : state.mode === "chair"
+        ? buildChairParts(next)
+        : state.mode === "desk"
+          ? buildDeskParts(next)
+          : buildModularParts(next);
   state.parts = packed.parts;
   state.dropped = packed.dropped;
   redraw();
@@ -214,11 +288,13 @@ function drawPathOn(g, path, ox = 0, oy = 0) {
 function drawLegend() {
   const p = state.params;
   const lidInfo = state.mode === "box" ? ` | lid ${p.boxHasLid ? "on" : "off"}` : "";
+  const chairInfo = state.mode === "chair" ? ` | chairSet ${p.chairCount}` : "";
+  const deskInfo = state.mode === "desk" ? ` | deskSet ${p.deskCount}` : "";
   noStroke();
   fill(30);
   textSize(12);
   text(
-    `Mode: ${state.mode}${lidInfo} | Sheet ${p.sheetW}x${p.sheetH} mm | thickness ${p.thickness} | tool ${p.toolDia} | clearance ${p.clearance} | parts ${state.parts.length} | dropped ${state.dropped}`,
+    `Mode: ${state.mode}${lidInfo}${chairInfo}${deskInfo} | Sheet ${p.sheetW}x${p.sheetH} mm | thickness ${p.thickness} | tool ${p.toolDia} | clearance ${p.clearance} | parts ${state.parts.length} | dropped ${state.dropped}`,
     16,
     18
   );
@@ -361,6 +437,516 @@ function buildBoxParts(p) {
     );
   }
   return nestParts(parts, p.sheetW, p.sheetH, p.gap);
+}
+
+function buildChairParts(p) {
+  const parts = [];
+  for (let i = 0; i < p.chairCount; i++) {
+    const set = createChairSet(i + 1, p);
+    parts.push(...set);
+  }
+  return nestParts(parts, p.sheetW, p.sheetH, p.gap);
+}
+
+function createChairSet(index, p) {
+  const d = p.thickness;
+  const s = p.chairSeatW;
+  const s2 = p.chairSideOffset;
+  const s3 = p.chairLegRise;
+  const s5 = p.chairLegSlim;
+  const s6 = p.chairLegTop;
+  const s7 = 20;
+  const s8 = -80;
+  const s11 = 0;
+  const yp5 = p.chairBackY;
+  const backAngleDeg = p.chairBackAngle;
+
+  const x1 = 140 + s8;
+  const y1 = 200 - d;
+  const legacyX2 = 145 + s7 + s8;
+  const legacyY2 = 100;
+  const backLen = dist(x1, y1, legacyX2, legacyY2);
+  const backRad = radians(backAngleDeg);
+  const x2 = x1 + cos(backRad) * backLen;
+  const y2 = y1 + sin(backRad) * backLen;
+  const x3 = 30;
+  const y3 = 200;
+  const x4 = 160 + s2;
+  const y4 = 200;
+
+  const yp3 = y1 - 20;
+  const yp4 = y1 - 60;
+  const yp8 = y4 - d / 9;
+  const resultX = calculateXFromY(x1, y1, x2, y2, yp3);
+  const resultX2 = calculateXFromY(x1, y1, x2, y2, yp4);
+  const resultX3 = calculateXFromY(x1, y1, x2, y2, yp5);
+
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const len = max(0.0001, dist(x1, y1, x2, y2));
+  const offsetX = (-dy / len) * d;
+  const offsetY = (dx / len) * d;
+
+  const dx2 = x4 - x3;
+  const dy2 = y4 - y3;
+  const len2 = max(0.0001, dist(x3, y3, x4, y4));
+  const offsetY2 = (dx2 / len2) * d;
+
+  const centerY = 120 + s3 + d;
+  const s9 = centerY / 4;
+  const s10 = centerY / 1.5;
+  const length2 = dist(resultX + s2, yp3, resultX2 + s2, yp4);
+  const length4 = dist(resultX2 + s2, yp4, resultX3 + s2, yp5);
+
+  const sokumen = normalizePath([
+    pnt(x3, y3),
+    pnt(x4 + s2, y4 + s11),
+    pnt(x4 + s2, y4 + s11 - offsetY2),
+    pnt(x1 + s2 - s11 / 5, y4 + s11 - offsetY2 - s11 / 5),
+    pnt(resultX + s2, yp3),
+    pnt(resultX + offsetX + s2, yp3 + offsetY),
+    pnt(resultX2 + offsetX + s2, yp4 + offsetY),
+    pnt(resultX2 + s2, yp4),
+    pnt(resultX3 + s2, yp5),
+    pnt(resultX3 + s2 + d, yp5 + offsetY),
+    pnt(30 + 170 + s2, 200 + centerY / 4),
+    pnt(30 + 170 + s2 - d, 200 + centerY / 4),
+    pnt(30 + 170 + s2 - d, 200 + centerY / 1.5),
+    pnt(30 + 170 + s2, 200 + centerY / 1.5),
+    pnt(30 + 170 + s2, 200 + 120 + s3 + d),
+    pnt(30 + 155 + s2, 200 + 120 + s3 + d),
+    pnt(30 + 155 + s2, 200 + 120 + s3),
+    pnt(30 + 140 + s2, 200 + 120 + s3),
+    pnt(30 + 120 + s5 + s2, 200 + s6),
+    pnt(30 + 45 - s5, 200 + s6),
+    pnt(30 - d + 30, 200 + 120 + s3),
+    pnt(30 - d + 15, 200 + 120 + s3),
+    pnt(30 - d + 15, 200 + 120 + s3 + d),
+    pnt(30, 200 + 120 + s3 + d),
+    pnt(30, 200 + centerY / 1.5),
+    pnt(30 - d, 200 + centerY / 1.5),
+    pnt(30 - d, 200 + centerY / 4),
+    pnt(30, 200 + centerY / 4),
+    pnt(30, 200),
+  ]);
+
+  const ue = normalizePath([
+    pnt(230 + s2 + d, 100),
+    pnt(230 + s2 + 40 + s - d, 100),
+    pnt(230 + s2 + 40 + s - d, 140),
+    pnt(230 + s2 + 40 + s, 140),
+    pnt(230 + s2 + 40 + s, 100 + 170 + 5 + d * 2 + s2),
+    pnt(230 + s2, 100 + 170 + 5 + d * 2 + s2),
+    pnt(230 + s2, 140),
+    pnt(230 + s2 + d, 140),
+  ]);
+
+  const semotare = normalizePath([
+    pnt(330 + s2 + s, 100),
+    pnt(330 + s2 + s + 40 + s, 100),
+    pnt(330 + s2 + s + 40 + s, 120),
+    pnt(330 + s2 + s + 40 + s - d, 120),
+    pnt(330 + s2 + s + 40 + s - d, 120 + length4),
+    pnt(330 + s2 + s + 40 + s, 120 + length4),
+    pnt(330 + s2 + s + 40 + s, 120 + length4 + length2),
+    pnt(330 + s2 + s, 120 + length4 + length2),
+    pnt(330 + s2 + s, 120 + length4),
+    pnt(330 + s2 + s + d, 120 + length4),
+    pnt(330 + s2 + s + d, 120),
+    pnt(330 + s2 + s, 120),
+  ]);
+
+  const mae = normalizePath([
+    pnt(450 + s2 + s * 2, 200 + s3 + 10 - d - s3),
+    pnt(450 + s2 + s * 2 + s, 200 + s3 + 10 - d - s3),
+    pnt(450 + s2 + s * 2 + s, 200 + s3 + 10 - s3),
+    pnt(450 + s2 + s * 2 + s + 20, 200 + s3 + 10 - s3),
+    pnt(450 + s2 + s * 2 + s + 20, s9 + d),
+    pnt(450 + s2 + s * 2 + s + 20 - d, s9 + d),
+    pnt(450 + s2 + s * 2 + s + 20 - d, s10 + d),
+    pnt(450 + s2 + s * 2 + s + 20, s10 + d),
+    pnt(450 + s2 + s * 2 + s + 20, 200 + s3 + 130 + d),
+    pnt(450 + s2 + s * 2 + s + 5, 200 + s3 + 130 + d),
+    pnt(450 + s2 + s * 2 + s + 5, 200 + s3 + 130),
+    pnt(450 + s2 + s * 2 + s - 10, 200 + s3 + 130),
+    pnt(450 + s2 + s * 2 + s - 20 + s5 / 2, 200 + s3 + 60 - s3),
+    pnt(450 + s2 + s * 2 + 20 - s5 / 2, 200 + s3 + 60 - s3),
+    pnt(450 + s2 + s * 2 + 10, 200 + s3 + 130),
+    pnt(450 + s2 + s * 2 - 5, 200 + s3 + 130),
+    pnt(450 + s2 + s * 2 - 5, 200 + s3 + 130 + d),
+    pnt(450 + s2 + s * 2 - 20, 200 + s3 + 130 + d),
+    pnt(450 + s2 + s * 2 - 20, s10 + d),
+    pnt(450 + s2 + s * 2 - 20 + d, s10 + d),
+    pnt(450 + s2 + s * 2 - 20 + d, s9 + d),
+    pnt(450 + s2 + s * 2 - 20, s9 + d),
+    pnt(450 + s2 + s * 2 - 20, 200 + s3 + 10 - s3),
+    pnt(450 + s2 + s * 2, 200 + s3 + 10 - s3),
+  ]);
+
+  const ushiro = normalizePath([
+    pnt(500 + s2 + s * 3 + d, 200 + s3 + 30 - s3),
+    pnt(500 + s2 + s * 3 + s + 40 - d, 200 + s3 + 30 - s3),
+    pnt(500 + s2 + s * 3 + s + 40 - d, s9 + d),
+    pnt(500 + s2 + s * 3 + s + 40, s9 + d),
+    pnt(500 + s2 + s * 3 + s + 40, s10 + d),
+    pnt(500 + s2 + s * 3 + s + 40 - d, s10 + d),
+    pnt(500 + s2 + s * 3 + s + 40 - d, 200 + s3 + 130 + d),
+    pnt(500 + s2 + s * 3 + s + 20, 200 + s3 + 130 + d),
+    pnt(500 + s2 + s * 3 + s + 20, 200 + s3 + 130),
+    pnt(500 + s2 + s * 3 + s + 5, 200 + s3 + 130),
+    pnt(500 + s2 + s * 3 + s + s5 / 2, 200 + s3 + 60 - s3),
+    pnt(500 + s2 + s * 3 + 40 - s5 / 2, 200 + s3 + 60 - s3),
+    pnt(500 + s2 + s * 3 + 35, 200 + s3 + 130),
+    pnt(500 + s2 + s * 3 + 20, 200 + s3 + 130),
+    pnt(500 + s2 + s * 3 + 20, 200 + s3 + 130 + d),
+    pnt(500 + s2 + s * 3 + d, 200 + s3 + 130 + d),
+    pnt(500 + s2 + s * 3 + d, s10 + d),
+    pnt(500 + s2 + s * 3, s10 + d),
+    pnt(500 + s2 + s * 3, s9 + d),
+    pnt(500 + s2 + s * 3 + d, s9 + d),
+  ]);
+
+  const ashi = normalizePath([
+    pnt(300 + s2, 50),
+    pnt(300 + s2 + 15, 50),
+    pnt(300 + s2 + 15, 50 - d),
+    pnt(300 + s2 + 30, 50 - d),
+    pnt(300 + s2 + 30, 50 - d + 15),
+    pnt(300 + s2 - d + 15, 50 + 30),
+    pnt(300 + s2 - d, 50 + 30),
+    pnt(300 + s2 - d, 50 + 15),
+    pnt(300 + s2, 50 + 15),
+  ]);
+
+  return [
+    makeFreePart(`CHAIR${index}-SOKUMEN`, sokumen.path),
+    makeFreePart(`CHAIR${index}-UE`, ue.path),
+    makeFreePart(`CHAIR${index}-SEMOTARE`, semotare.path),
+    makeFreePart(`CHAIR${index}-MAE`, mae.path),
+    makeFreePart(`CHAIR${index}-USHIRO`, ushiro.path),
+    makeFreePart(`CHAIR${index}-ASHI`, ashi.path),
+  ];
+}
+
+function makeFreePart(label, path) {
+  const box = pathBounds(path);
+  return {
+    kind: "chair-panel",
+    label,
+    w: box.w,
+    h: box.h,
+    outline: path,
+    holes: [],
+    x: 0,
+    y: 0,
+  };
+}
+
+function normalizePath(path) {
+  const b = pathBounds(path);
+  return {
+    path: path.map((pt) => ({ x: pt.x - b.minX, y: pt.y - b.minY })),
+    w: b.w,
+    h: b.h,
+  };
+}
+
+function pathBounds(path) {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const pt of path) {
+    minX = min(minX, pt.x);
+    minY = min(minY, pt.y);
+    maxX = max(maxX, pt.x);
+    maxY = max(maxY, pt.y);
+  }
+  return { minX, minY, w: maxX - minX, h: maxY - minY };
+}
+
+function pnt(x, y) {
+  return { x, y };
+}
+
+function calculateXFromY(x1, y1, x2, y2, yTarget) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  if (abs(dx) < 0.0001 || abs(dy) < 0.0001) return x1;
+  const m = dy / dx;
+  return (yTarget - y1) / m + x1;
+}
+
+function buildDeskParts(p) {
+  const parts = [];
+  for (let i = 0; i < p.deskCount; i++) {
+    parts.push(...createDeskSet(i + 1, p));
+  }
+  return nestParts(parts, p.sheetW, p.sheetH, p.gap);
+}
+
+function createDeskSet(index, p) {
+  const d = p.thickness;
+  const s = p.deskW;
+  const s2 = p.deskD;
+  const s3 = p.deskLegH;
+  const s4 = p.deskApron;
+  const s5 = p.deskLegW;
+  const s6 = p.deskLegRight1;
+  const s7 = p.deskLegRight2;
+  const s8 = p.deskLegLeft1;
+  const s9 = p.deskLegLeft2;
+
+  const tenban = normalizePath(deskTenbanPath(10, 10, s, s2, d)).path;
+  const makuita = normalizePath(deskMakuitaPath(10, 30 + s2, s, s4, d)).path;
+  const makuita2 = normalizePath(deskMakuita2Path(30 + s, 10, s2, s4, d)).path;
+  const ashi = normalizePath(deskAshiPath(80 + s + s4, 10, s, s3, s4, s5, s6, s8, d)).path;
+  const ashi2 = normalizePath(deskAshi2Path(100 + s * 2 + s4, 10, s2, s3, s4, s5, s7, s9, d)).path;
+  const ashisaki = normalizePath(deskAshisakiPath(130 + s * 2 + s4 + s2, 10, s5, d)).path;
+
+  return [
+    makeFreePart(`DESK${index}-TENBAN`, tenban),
+    makeFreePart(`DESK${index}-MAKUITA1`, makuita),
+    makeFreePart(`DESK${index}-MAKUITA2`, makuita2),
+    makeFreePart(`DESK${index}-ASHI1`, ashi),
+    makeFreePart(`DESK${index}-ASHI2`, ashi2),
+    makeFreePart(`DESK${index}-ASHISAKI`, ashisaki),
+  ];
+}
+
+function deskTenbanPath(x, y, s, s2, d) {
+  return [
+    pnt(x, y),
+    pnt(x + s / 3 - (d / 2 + d), y),
+    pnt(x + s / 3 - (d / 2 + d), y + d),
+    pnt(x + s / 3 - d / 2, y + d),
+    pnt(x + s / 3 - d / 2, y + d * 2),
+    pnt(x + s / 3 + d / 2, y + d * 2),
+    pnt(x + s / 3 + d / 2, y + d),
+    pnt(x + s / 3 + d + d / 2, y + d),
+    pnt(x + s / 3 + d + d / 2, y),
+    pnt(x + s * 2 / 3 - (d / 2 + d), y),
+    pnt(x + s * 2 / 3 - (d / 2 + d), y + d),
+    pnt(x + s * 2 / 3 - d / 2, y + d),
+    pnt(x + s * 2 / 3 - d / 2, y + d * 2),
+    pnt(x + s * 2 / 3 + d / 2, y + d * 2),
+    pnt(x + s * 2 / 3 + d / 2, y + d),
+    pnt(x + s * 2 / 3 + d + d / 2, y + d),
+    pnt(x + s * 2 / 3 + d + d / 2, y),
+    pnt(x + s, y),
+    pnt(x + s, y + s2 / 3 - (d / 2 + d)),
+    pnt(x + s - d, y + s2 / 3 - (d / 2 + d)),
+    pnt(x + s - d, y + s2 / 3 - d / 2),
+    pnt(x + s - d * 2, y + s2 / 3 - d / 2),
+    pnt(x + s - d * 2, y + s2 / 3 + d / 2),
+    pnt(x + s - d, y + s2 / 3 + d / 2),
+    pnt(x + s - d, y + s2 / 3 + (d / 2 + d)),
+    pnt(x + s, y + s2 / 3 + (d / 2 + d)),
+    pnt(x + s, y + s2 * 2 / 3 - (d / 2 + d)),
+    pnt(x + s - d, y + s2 * 2 / 3 - (d / 2 + d)),
+    pnt(x + s - d, y + s2 * 2 / 3 - d / 2),
+    pnt(x + s - d * 2, y + s2 * 2 / 3 - d / 2),
+    pnt(x + s - d * 2, y + s2 * 2 / 3 + d / 2),
+    pnt(x + s - d, y + s2 * 2 / 3 + d / 2),
+    pnt(x + s - d, y + s2 * 2 / 3 + (d / 2 + d)),
+    pnt(x + s, y + s2 * 2 / 3 + (d / 2 + d)),
+    pnt(x + s, y + s2),
+    pnt(x + s * 2 / 3 + d + d / 2, y + s2),
+    pnt(x + s * 2 / 3 + d + d / 2, y + s2 - d),
+    pnt(x + s * 2 / 3 + d / 2, y + s2 - d),
+    pnt(x + s * 2 / 3 + d / 2, y + s2 - d * 2),
+    pnt(x + s * 2 / 3 - d / 2, y + s2 - d * 2),
+    pnt(x + s * 2 / 3 - d / 2, y + s2 - d),
+    pnt(x + s * 2 / 3 - (d / 2 + d), y + s2 - d),
+    pnt(x + s * 2 / 3 - (d / 2 + d), y + s2),
+    pnt(x + s / 3 + d + d / 2, y + s2),
+    pnt(x + s / 3 + d + d / 2, y + s2 - d),
+    pnt(x + s / 3 + d / 2, y + s2 - d),
+    pnt(x + s / 3 + d / 2, y + s2 - d * 2),
+    pnt(x + s / 3 - d / 2, y + s2 - d * 2),
+    pnt(x + s / 3 - d / 2, y + s2 - d),
+    pnt(x + s / 3 - (d / 2 + d), y + s2 - d),
+    pnt(x + s / 3 - (d / 2 + d), y + s2),
+    pnt(x, y + s2),
+    pnt(x, y + s2 * 2 / 3 + (d / 2 + d)),
+    pnt(x + d, y + s2 * 2 / 3 + (d / 2 + d)),
+    pnt(x + d, y + s2 * 2 / 3 + d / 2),
+    pnt(x + d * 2, y + s2 * 2 / 3 + d / 2),
+    pnt(x + d * 2, y + s2 * 2 / 3 - d / 2),
+    pnt(x + d, y + s2 * 2 / 3 - d / 2),
+    pnt(x + d, y + s2 * 2 / 3 - (d / 2 + d)),
+    pnt(x, y + s2 * 2 / 3 - (d / 2 + d)),
+    pnt(x, y + s2 / 3 + (d / 2 + d)),
+    pnt(x + d, y + s2 / 3 + (d / 2 + d)),
+    pnt(x + d, y + s2 / 3 + d / 2),
+    pnt(x + d * 2, y + s2 / 3 + d / 2),
+    pnt(x + d * 2, y + s2 / 3 - d / 2),
+    pnt(x + d, y + s2 / 3 - d / 2),
+    pnt(x + d, y + s2 / 3 - (d / 2 + d)),
+    pnt(x, y + s2 / 3 - (d / 2 + d)),
+  ];
+}
+
+function deskMakuitaPath(x, y, s, s4, d) {
+  return [
+    pnt(x, y),
+    pnt(x + d * 2, y),
+    pnt(x + d * 2, y + d),
+    pnt(x + s / 3 - d - d / 2, y + d),
+    pnt(x + s / 3 - d - d / 2, y),
+    pnt(x + s / 3 + d + d / 2, y),
+    pnt(x + s / 3 + d + d / 2, y + d),
+    pnt(x + s * 2 / 3 - d - d / 2, y + d),
+    pnt(x + s * 2 / 3 - d - d / 2, y),
+    pnt(x + s * 2 / 3 + d + d / 2, y),
+    pnt(x + s * 2 / 3 + d + d / 2, y + d),
+    pnt(x + s - d * 2, y + d),
+    pnt(x + s - d * 2, y),
+    pnt(x + s, y),
+    pnt(x + s, y + d * 2),
+    pnt(x + s - d, y + d * 2),
+    pnt(x + s - d, y + s4),
+    pnt(x + s * 2 / 3 + d / 2, y + s4),
+    pnt(x + s * 2 / 3 + d / 2, y + s4 - s4 / 2),
+    pnt(x + s * 2 / 3 - d / 2, y + s4 - s4 / 2),
+    pnt(x + s * 2 / 3 - d / 2, y + s4),
+    pnt(x + s / 3 + d / 2, y + s4),
+    pnt(x + s / 3 + d / 2, y + s4 - s4 / 2),
+    pnt(x + s / 3 - d / 2, y + s4 - s4 / 2),
+    pnt(x + s / 3 - d / 2, y + s4),
+    pnt(x + d, y + s4),
+    pnt(x + d, y + d * 2),
+    pnt(x, y + d * 2),
+  ];
+}
+
+function deskMakuita2Path(x, y, s2, s4, d) {
+  return [
+    pnt(x, y),
+    pnt(x + d * 2, y),
+    pnt(x + d * 2, y + d),
+    pnt(x + s4, y + d),
+    pnt(x + s4, y + s2 - d),
+    pnt(x + d * 2, y + s2 - d),
+    pnt(x + d * 2, y + s2),
+    pnt(x, y + s2),
+    pnt(x, y + s2 - d * 2),
+    pnt(x + d, y + s2 - d * 2),
+    pnt(x + d, y + s2 * 2 / 3 + d + d / 2),
+    pnt(x, y + s2 * 2 / 3 + d + d / 2),
+    pnt(x, y + s2 * 2 / 3 + d / 2),
+    pnt(x + s4 / 2, y + s2 * 2 / 3 + d / 2),
+    pnt(x + s4 / 2, y + s2 * 2 / 3 - d / 2),
+    pnt(x, y + s2 * 2 / 3 - d / 2),
+    pnt(x, y + s2 * 2 / 3 - d - d / 2),
+    pnt(x + d, y + s2 * 2 / 3 - d - d / 2),
+    pnt(x + d, y + s2 / 3 + d + d / 2),
+    pnt(x, y + s2 / 3 + d + d / 2),
+    pnt(x, y + s2 / 3 + d / 2),
+    pnt(x + s4 / 2, y + s2 / 3 + d / 2),
+    pnt(x + s4 / 2, y + s2 / 3 - d / 2),
+    pnt(x, y + s2 / 3 - d / 2),
+    pnt(x, y + s2 / 3 - d - d / 2),
+    pnt(x + d, y + s2 / 3 - d - d / 2),
+    pnt(x + d, y + d * 2),
+    pnt(x, y + d * 2),
+  ];
+}
+
+function deskAshiPath(x, y, s, s3, s4, s5, s6, s8, d) {
+  return [
+    pnt(x, y + d),
+    pnt(x + s / 3 - d - d / 2, y + d),
+    pnt(x + s / 3 - d - d / 2, y),
+    pnt(x + s / 3 - d / 2, y),
+    pnt(x + s / 3 - d / 2, y + d * 2),
+    pnt(x + s / 3 + d / 2, y + d * 2),
+    pnt(x + s / 3 + d / 2, y),
+    pnt(x + s / 3 + d + d / 2, y),
+    pnt(x + s / 3 + d + d / 2, y + d),
+    pnt(x + s * 2 / 3 - d - d / 2, y + d),
+    pnt(x + s * 2 / 3 - d - d / 2, y),
+    pnt(x + s * 2 / 3 - d / 2, y),
+    pnt(x + s * 2 / 3 - d / 2, y + d * 2),
+    pnt(x + s * 2 / 3 + d / 2, y + d * 2),
+    pnt(x + s * 2 / 3 + d / 2, y),
+    pnt(x + s * 2 / 3 + d + d / 2, y),
+    pnt(x + s * 2 / 3 + d + d / 2, y + d),
+    pnt(x + s - d, y + d),
+    pnt(x + s - d, y + s4),
+    pnt(x + s, y + s4),
+    pnt(x + s, y + s4 + (s3 - s4) / 2),
+    pnt(x + s - d, y + s4 + (s3 - s4) / 2),
+    pnt(x + s - d, y + s3),
+    pnt(x + s - d - s5 / 2, y + s3),
+    pnt(x + s - d - s5 / 2, y + s3 - d),
+    pnt(x + s - d - s5, y + s3 - d),
+    pnt(x + s - d - s6, y + s4),
+    pnt(x + s8, y + s4),
+    pnt(x + s5, y + s3 - d),
+    pnt(x + s5 / 2, y + s3 - d),
+    pnt(x + s5 / 2, y + s3),
+    pnt(x, y + s3),
+    pnt(x, y + s4 + (s3 - s4) / 2),
+    pnt(x + d, y + s4 + (s3 - s4) / 2),
+    pnt(x + d, y + s4),
+    pnt(x, y + s4),
+  ];
+}
+
+function deskAshi2Path(x, y, s2, s3, s4, s5, s7, s9, d) {
+  return [
+    pnt(x, y + d),
+    pnt(x + s2 / 3 - d - d / 2, y + d),
+    pnt(x + s2 / 3 - d - d / 2, y),
+    pnt(x + s2 / 3 - d / 2, y),
+    pnt(x + s2 / 3 - d / 2, y + d * 2),
+    pnt(x + s2 / 3 + d / 2, y + d * 2),
+    pnt(x + s2 / 3 + d / 2, y),
+    pnt(x + s2 / 3 + d + d / 2, y),
+    pnt(x + s2 / 3 + d + d / 2, y + d),
+    pnt(x + s2 * 2 / 3 - d - d / 2, y + d),
+    pnt(x + s2 * 2 / 3 - d - d / 2, y),
+    pnt(x + s2 * 2 / 3 - d / 2, y),
+    pnt(x + s2 * 2 / 3 - d / 2, y + d * 2),
+    pnt(x + s2 * 2 / 3 + d / 2, y + d * 2),
+    pnt(x + s2 * 2 / 3 + d / 2, y),
+    pnt(x + s2 * 2 / 3 + d + d / 2, y),
+    pnt(x + s2 * 2 / 3 + d + d / 2, y + d),
+    pnt(x + s2 - d, y + d),
+    pnt(x + s2 - d, y + s4),
+    pnt(x + s2, y + s4),
+    pnt(x + s2, y + s4 + (s3 - s4) / 2),
+    pnt(x + s2 - d, y + s4 + (s3 - s4) / 2),
+    pnt(x + s2 - d, y + s3),
+    pnt(x + s2 - d - s5 / 2, y + s3),
+    pnt(x + s2 - d - s5 / 2, y + s3 - d),
+    pnt(x + s2 - d - s5, y + s3 - d),
+    pnt(x + s2 - d - s7, y + s4),
+    pnt(x + s9, y + s4),
+    pnt(x + s5, y + s3 - d),
+    pnt(x + s5 / 2, y + s3 - d),
+    pnt(x + s5 / 2, y + s3),
+    pnt(x, y + s3),
+    pnt(x, y + s4 + (s3 - s4) / 2),
+    pnt(x + d, y + s4 + (s3 - s4) / 2),
+    pnt(x + d, y + s4),
+    pnt(x, y + s4),
+  ];
+}
+
+function deskAshisakiPath(x, y, s5, d) {
+  return [
+    pnt(x + s5 / 2 - d, y),
+    pnt(x + (s5 + s5 / 2) / 2, y),
+    pnt(x + s5 + s5 / 2 - d, y + (s5 + s5 / 2) / 2),
+    pnt(x + s5 + s5 / 2 - d, y + s5 + d),
+    pnt(x + s5 - d, y + s5 + d),
+    pnt(x + s5 - d, y + s5),
+    pnt(x + s5 / 2, y + s5),
+    pnt(x + s5 / 2, y + s5 / 2),
+    pnt(x + s5 / 2 - d, y + s5 / 2),
+  ];
 }
 
 function makeFingerPanel(label, w, h, fingerCount, depth, clearance, radius, edges) {

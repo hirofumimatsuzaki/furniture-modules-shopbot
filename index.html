@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ShopBot Modular Parts Generator</title>
+    <style>
+      :root {
+        --bg: #f3f1e9;
+        --panel: #fffdf6;
+        --line: #24211d;
+        --accent: #2e6f53;
+        --muted: #6f6a61;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "Avenir Next", "Hiragino Kaku Gothic ProN", sans-serif;
+        background: radial-gradient(circle at 20% 10%, #fefaf0 0%, var(--bg) 60%);
+        color: var(--line);
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        min-height: 100vh;
+      }
+      .controls {
+        padding: 18px;
+        border-right: 1px solid #d8d3c7;
+        background: var(--panel);
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+      .tabs {
+        display: flex;
+        gap: 8px;
+        margin: 8px 0 12px;
+      }
+      .tab {
+        flex: 1;
+        border: 1px solid #cfc9ba;
+        border-radius: 10px;
+        background: #f7f3e8;
+        color: #2f2a24;
+        padding: 8px 10px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .tab.active {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+      p {
+        margin: 0 0 14px;
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+      .group {
+        margin-bottom: 12px;
+      }
+      .hidden {
+        display: none;
+      }
+      label {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+        margin-bottom: 4px;
+      }
+      .check-row {
+        justify-content: flex-start;
+        gap: 8px;
+        font-size: 13px;
+      }
+      input {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #d3cdbf;
+        border-radius: 8px;
+        background: #fff;
+      }
+      .check-row input {
+        width: auto;
+        padding: 0;
+        border: 0;
+      }
+      .buttons {
+        display: flex;
+        gap: 8px;
+        margin-top: 16px;
+      }
+      button {
+        border: 0;
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      #apply {
+        background: var(--accent);
+        color: #fff;
+      }
+      #export {
+        background: #2c2b29;
+        color: #fff;
+      }
+      .stage {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+      }
+      #canvas-wrap {
+        width: 100%;
+        max-width: 1100px;
+      }
+      @media (max-width: 960px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        .controls {
+          border-right: 0;
+          border-bottom: 1px solid #d8d3c7;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="controls">
+        <h1>Modular Parts Generator</h1>
+        <div class="tabs">
+          <button id="tab-modular" class="tab active" type="button">モジュール</button>
+          <button id="tab-box" class="tab" type="button">Box</button>
+        </div>
+        <p id="mode-description">
+          合板の廃材から再利用しやすい部品を生成します。単位は mm。外周と内側スロットを
+          SVG で出力して CAM へ渡してください。
+        </p>
+
+        <div class="group" data-mode="all">
+          <label for="sheetW">シート幅 (mm)</label>
+          <input id="sheetW" type="number" value="1200" min="200" step="1" />
+        </div>
+        <div class="group" data-mode="all">
+          <label for="sheetH">シート高 (mm)</label>
+          <input id="sheetH" type="number" value="900" min="200" step="1" />
+        </div>
+        <div class="group" data-mode="modular">
+          <label for="moduleSize">パネルサイズ (mm)</label>
+          <input id="moduleSize" type="number" value="240" min="80" step="1" />
+        </div>
+        <div class="group" data-mode="modular">
+          <label for="panelCount">パネル枚数</label>
+          <input id="panelCount" type="number" value="8" min="1" step="1" />
+        </div>
+        <div class="group" data-mode="all">
+          <label for="edgeSlots">1辺のスロット数</label>
+          <input id="edgeSlots" type="number" value="3" min="1" max="9" step="1" />
+        </div>
+        <div class="group hidden" data-mode="box">
+          <label for="boxW">Box 幅 (mm)</label>
+          <input id="boxW" type="number" value="360" min="120" step="1" />
+        </div>
+        <div class="group hidden" data-mode="box">
+          <label for="boxD">Box 奥行 (mm)</label>
+          <input id="boxD" type="number" value="260" min="120" step="1" />
+        </div>
+        <div class="group hidden" data-mode="box">
+          <label for="boxH">Box 高さ (mm)</label>
+          <input id="boxH" type="number" value="280" min="120" step="1" />
+        </div>
+        <div class="group hidden" data-mode="box">
+          <label for="boxCount">Box セット数</label>
+          <input id="boxCount" type="number" value="1" min="1" step="1" />
+        </div>
+        <div class="group hidden" data-mode="box">
+          <label class="check-row" for="boxHasLid">
+            <input id="boxHasLid" type="checkbox" checked />
+            上面に蓋パネルを付ける
+          </label>
+        </div>
+        <div class="group" data-mode="all">
+          <label for="thickness">板厚 (mm)</label>
+          <input id="thickness" type="number" value="15" min="3" step="0.1" />
+        </div>
+        <div class="group" data-mode="all">
+          <label for="clearance">クリアランス (mm)</label>
+          <input id="clearance" type="number" value="0.2" min="-0.5" step="0.05" />
+        </div>
+        <div class="group" data-mode="all">
+          <label for="toolDia">エンドミル径 (mm)</label>
+          <input id="toolDia" type="number" value="6" min="1" step="0.1" />
+        </div>
+        <div class="group" data-mode="all">
+          <label for="gap">部品間隔 (mm)</label>
+          <input id="gap" type="number" value="16" min="4" step="1" />
+        </div>
+
+        <div class="buttons">
+          <button id="apply">再生成</button>
+          <button id="export">SVG保存</button>
+        </div>
+      </aside>
+      <main class="stage">
+        <div id="canvas-wrap"></div>
+      </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/p5.js-svg@1.5.1/dist/p5.svg.min.js"></script>
+    <script src="./main.js"></script>
+  </body>
+</html>

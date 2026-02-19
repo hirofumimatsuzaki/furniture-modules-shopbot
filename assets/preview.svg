@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f8f4ea" />
+      <stop offset="100%" stop-color="#ebe4d5" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)" />
+  <rect x="40" y="40" width="1120" height="550" rx="20" fill="#fffdf7" stroke="#d4ccba" />
+  <text x="80" y="110" font-family="Arial, sans-serif" font-size="44" fill="#2a261f">
+    ShopBot Modular Parts Generator
+  </text>
+  <text x="80" y="150" font-family="Arial, sans-serif" font-size="24" fill="#5b554a">
+    Modular / Box (Finger Joint) / SVG Export
+  </text>
+
+  <g transform="translate(80,200)">
+    <rect x="0" y="0" width="320" height="320" fill="#fbf7ef" stroke="#cfc5b2" />
+    <text x="16" y="34" font-family="Arial, sans-serif" font-size="20" fill="#3a352e">Modular</text>
+
+    <rect x="28" y="60" width="110" height="110" fill="none" stroke="#2e6f53" stroke-width="3" />
+    <rect x="168" y="60" width="110" height="36" fill="none" stroke="#2e6f53" stroke-width="3" />
+    <path d="M168 122h60v30h-60z" fill="none" stroke="#2e6f53" stroke-width="3" />
+    <path d="M30 220h120v80h-120z" fill="none" stroke="#2e6f53" stroke-width="3" />
+    <path d="M180 220h110v80h-110z" fill="none" stroke="#2e6f53" stroke-width="3" />
+  </g>
+
+  <g transform="translate(450,200)">
+    <rect x="0" y="0" width="320" height="320" fill="#fbf7ef" stroke="#cfc5b2" />
+    <text x="16" y="34" font-family="Arial, sans-serif" font-size="20" fill="#3a352e">Box (Lid Off)</text>
+
+    <path d="M30 80h260v80h-260z" fill="none" stroke="#2a2a2a" stroke-width="3" />
+    <path d="M30 200h260v80h-260z" fill="none" stroke="#2a2a2a" stroke-width="3" />
+    <path d="M50 80v-16h20v16m20 0v-16h20v16m20 0v-16h20v16m20 0v-16h20v16m20 0v-16h20v16m20 0v-16h20v16m20 0v-16h20v16" fill="none" stroke="#2e6f53" stroke-width="3"/>
+  </g>
+
+  <g transform="translate(820,200)">
+    <rect x="0" y="0" width="300" height="320" fill="#fbf7ef" stroke="#cfc5b2" />
+    <text x="16" y="34" font-family="Arial, sans-serif" font-size="20" fill="#3a352e">Output</text>
+    <rect x="24" y="58" width="252" height="226" fill="#ffffff" stroke="#2a2a2a" stroke-width="2"/>
+    <path d="M42 90h120v120h-120zM180 90h78v48h-78zM180 156h78v54h-78z" fill="none" stroke="#2e6f53" stroke-width="2"/>
+    <text x="32" y="308" font-family="Arial, sans-serif" font-size="18" fill="#5b554a">shopbot-box-*.svg</text>
+  </g>
+</svg>
